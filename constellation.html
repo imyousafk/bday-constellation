@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Our Constellation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0B0E2C;
+    --night-deep:#060818;
+    --starlight:#F5F0E6;
+    --amber:#FFB86B;
+    --rose:#E89BA6;
+    --nebula:#3D2B5C;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html, body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:radial-gradient(ellipse at 50% 20%, var(--nebula) 0%, var(--night) 45%, var(--night-deep) 100%);
+    font-family:'Nunito', sans-serif;
+    color:var(--starlight);
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  #sky{
+    position:relative;
+    width:100%;
+    height:100%;
+  }
+
+  /* ---------- ambient twinkling background stars ---------- */
+  .bg-star{
+    position:absolute;
+    border-radius:50%;
+    background:var(--starlight);
+    opacity:0.4;
+    animation:twinkle ease-in-out infinite;
+  }
+  @keyframes twinkle{
+    0%,100%{ opacity:0.15; }
+    50%{ opacity:0.7; }
+  }
+
+  /* ---------- intro overlay ---------- */
+  #intro{
+    position:absolute;
+    inset:0;
+    z-index:50;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:2rem;
+    background:radial-gradient(ellipse at 50% 20%, var(--nebula) 0%, var(--night) 45%, var(--night-deep) 100%);
+    transition:opacity 1s ease, visibility 1s ease;
+  }
+  #intro.hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .intro-title{
+    font-family:'Caveat', cursive;
+    font-size:clamp(2.2rem, 7vw, 3.2rem);
+    color:var(--amber);
+    margin-bottom:0.8rem;
+    font-weight:700;
+  }
+  .intro-sub{
+    font-size:0.95rem;
+    color:#cfc9e0;
+    max-width:320px;
+    margin-bottom:2.2rem;
+    line-height:1.6;
+  }
+  .begin-btn{
+    font-family:'Nunito', sans-serif;
+    font-weight:700;
+    font-size:1rem;
+    color:var(--night-deep);
+    background:var(--amber);
+    border:none;
+    padding:0.85rem 2.1rem;
+    border-radius:999px;
+    cursor:pointer;
+    box-shadow:0 0 28px rgba(255,184,107,0.55);
+    transition:transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .begin-btn:hover{ transform:scale(1.05); box-shadow:0 0 36px rgba(255,184,107,0.75); }
+  .begin-btn:focus-visible{ outline:3px solid var(--starlight); outline-offset:3px; }
+
+  /* ---------- constellation lines (svg) ---------- */
+  #lines{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    z-index:5;
+    pointer-events:none;
+  }
+  #lines path{
+    fill:none;
+    stroke:var(--amber);
+    stroke-width:1.4;
+    opacity:0.55;
+    stroke-dasharray:6 5;
+  }
+
+  /* ---------- interactive stars ---------- */
+  .star-node{
+    position:absolute;
+    width:30px;
+    height:30px;
+    transform:translate(-50%,-50%);
+    z-index:10;
+    cursor:pointer;
+    background:none;
+    border:none;
+    padding:0;
+  }
+  .star-node .glow{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background:radial-gradient(circle, var(--starlight) 0%, rgba(245,240,230,0) 70%);
+    animation:starPulse 3s ease-in-out infinite;
+    transition:background 0.4s ease;
+  }
+  .star-node.final .glow{
+    background:radial-gradient(circle, var(--amber) 0%, rgba(255,184,107,0) 70%);
+  }
+  .star-node.opened .glow{
+    animation:none;
+    opacity:0.9;
+  }
+  @keyframes starPulse{
+    0%,100%{ transform:scale(0.85); opacity:0.6; }
+    50%{ transform:scale(1.15); opacity:1; }
+  }
+  .star-node::after{
+    content:'';
+    position:absolute;
+    top:50%; left:50%;
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--starlight);
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 8px 2px var(--starlight);
+  }
+  .star-node.final::after{
+    background:var(--amber);
+    box-shadow:0 0 14px 4px var(--amber);
+    width:8px; height:8px;
+  }
+  .star-node:focus-visible{
+    outline:2px solid var(--starlight);
+    outline-offset:4px;
+    border-radius:50%;
+  }
+  .star-label{
+    position:absolute;
+    top:38px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:0.7rem;
+    color:#cfc9e0;
+    white-space:nowrap;
+    opacity:0.75;
+  }
+
+  /* progress hint */
+  #progress{
+    position:absolute;
+    top:1.2rem;
+    left:50%;
+    transform:translateX(-50%);
+    z-index:20;
+    font-size:0.78rem;
+    color:#cfc9e0;
+    background:rgba(11,14,44,0.55);
+    padding:0.4rem 0.9rem;
+    border-radius:999px;
+    backdrop-filter:blur(6px);
+    border:1px solid rgba(255,184,107,0.25);
+  }
+
+  /* ---------- card modal ---------- */
+  #cardOverlay{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(6,8,24,0.78);
+    backdrop-filter:blur(4px);
+    opacity:0;
+    visibility:hidden;
+    transition:opacity 0.4s ease, visibility 0.4s ease;
+    padding:1.5rem;
+  }
+  #cardOverlay.show{
+    opacity:1;
+    visibility:visible;
+  }
+  .card{
+    background:linear-gradient(160deg, #14173f, #0c0e2c);
+    border:1px solid rgba(255,184,107,0.3);
+    border-radius:20px;
+    max-width:380px;
+    width:100%;
+    padding:1.8rem 1.6rem;
+    text-align:center;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.6), 0 0 40px rgba(255,184,107,0.08);
+    transform:scale(0.9) translateY(20px);
+    transition:transform 0.4s ease;
+    max-height:85vh;
+    overflow-y:auto;
+  }
+  #cardOverlay.show .card{
+    transform:scale(1) translateY(0);
+  }
+  .card-photo{
+    width:100%;
+    aspect-ratio:4/5;
+    border-radius:14px;
+    background:linear-gradient(135deg, var(--nebula), #1d1640);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#cfc9e0;
+    font-size:0.8rem;
+    text-align:center;
+    padding:1rem;
+    margin-bottom:1rem;
+    overflow:hidden;
+  }
+  .card-photo img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:14px;
+  }
+  .card-caption{
+    font-family:'Caveat', cursive;
+    font-size:1.4rem;
+    color:var(--amber);
+    margin-bottom:0.3rem;
+  }
+  .card-text{
+    font-size:0.95rem;
+    line-height:1.6;
+    color:#e7e3f3;
+  }
+  .card-close{
+    margin-top:1.4rem;
+    background:none;
+    border:1px solid rgba(245,240,230,0.3);
+    color:var(--starlight);
+    padding:0.55rem 1.4rem;
+    border-radius:999px;
+    cursor:pointer;
+    font-family:'Nunito', sans-serif;
+    font-size:0.85rem;
+    transition:background 0.2s ease;
+  }
+  .card-close:hover{ background:rgba(245,240,230,0.1); }
+
+  /* letter specific */
+  .letter-body{
+    text-align:left;
+    font-size:0.98rem;
+    line-height:1.85;
+    color:#e7e3f3;
+  }
+  .letter-body p{ margin-bottom:0.9rem; }
+  .signoff{
+    font-family:'Caveat', cursive;
+    font-size:1.5rem;
+    color:var(--rose);
+    margin-top:0.6rem;
+  }
+
+  /* music toggle */
+  .music-toggle{
+    position:fixed;
+    top:1.2rem;
+    right:1.2rem;
+    z-index:60;
+    background:rgba(11,14,44,0.6);
+    border:1px solid rgba(255,184,107,0.25);
+    color:var(--starlight);
+    width:42px;
+    height:42px;
+    border-radius:50%;
+    font-size:1.1rem;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    backdrop-filter:blur(6px);
+    transition:transform 0.2s ease;
+  }
+  .music-toggle:hover{ transform:scale(1.08); }
+  .music-toggle:focus-visible{ outline:2px solid var(--starlight); outline-offset:2px; }
+
+  /* final reveal banner */
+  #finaleBanner{
+    position:fixed;
+    bottom:1.6rem;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    z-index:55;
+    background:rgba(11,14,44,0.7);
+    border:1px solid rgba(255,184,107,0.3);
+    padding:0.7rem 1.3rem;
+    border-radius:999px;
+    font-size:0.82rem;
+    color:var(--amber);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.5s ease, transform 0.5s ease;
+    backdrop-filter:blur(6px);
+    text-align:center;
+  }
+  #finaleBanner.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+    pointer-events:auto;
+    cursor:pointer;
+  }
+
+  @media (max-width:480px){
+    .star-label{ font-size:0.62rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-star, .star-node .glow{ animation:none !important; }
+    *{ transition-duration:0.2s !important; }
+  }
+</style>
+</head>
+<body>
+
+
+<div id="sky">
+  <svg id="lines" preserveAspectRatio="none"></svg>
+</div>
+
+<div id="progress">0 of 6 stars found</div>
+
+<button class="music-toggle" id="musicToggle" aria-label="Toggle music">🔇</button>
+<audio id="bgMusic" loop>
+  <source src="wanna be.mp3" type="audio/mpeg">
+</audio>
+
+<div id="intro">
+  <div class="intro-title">To The Star ✨⭐ which illuminate my nights</div>
+  <p class="intro-sub">I scattered a few of us across the sky. Tap each star in whatever order feels right. One of them is waiting until the end.</p>
+  <button class="begin-btn" id="beginBtn">Begin ✨</button>
+</div>
+
+<div id="cardOverlay">
+  <div class="card" id="cardInner"></div>
+</div>
+
+<div id="finaleBanner">a star is waiting for you ⭐</div>
+
+<script>
+  // ---------------- CONFIG: edit your content here ----------------
+  const starData = [
+    { id:'s1', x:18, y:28, label:'that night', caption:'That one suprising night 🌙',
+      photo:"images/image1.jpg", 
+      text:'The night which we met for the first time will always be in my memory,seeing you after school such a long time of wait' },
+    { id:'s2', x:72, y:20, label:'that laugh', caption:"When you couldn't stop laughing 😂",
+      photo:"images/image2.jpg",
+      text:'Your laugh is my favorite melody where my hearts feels ease, it turns ordinary memory into something precious pri	ncess' },
+    { id:'s3', x:30, y:62, label:'our memory', caption:'Our little time 🗺️',
+      photo:"images/image3.jpg",
+      text:'Time just rushes whenever im with you, yet they always stay with me and i replay with big smile' },
+    { id:'s4', x:80, y:58, label:'quiet moments', caption:'Cozy memories, just us 💗',
+       photo:"images/image4.jpg",
+      text:'Every moment spent with you felt like a still time and peaceful breeze of hope.' },
+    { id:'s5', x:50, y:78, label:'you, lately', caption:'My favorite person, always 💗',
+      photo:"images/image5.jpg",
+      text:'you are my fav place to be, my peace, my happiness and mostly my fav person 💗 who makes me complete and special' },
+    { id:'s6', x:50, y:42, label:'', caption:'', photo:null, isFinal:true,
+      letterParagraphs:[
+        'Happy birthday, princess.',
+        "Every star you just opened is real — a tiny piece of something we made together. I wanted to give you something a gift box couldn't hold.",
+        'Thank you for being exactly who you are, on the easy days and the hard ones. Here\'s to another year of finding our way back to each other, every single time.',
+        'I love you more than this little sky could ever say.'
+      ],
+      signoff:'— yours, always a stranger 🤍'
+    }
+  ];
+
+  // ---------------- background twinkle stars ----------------
+  const sky = document.getElementById('sky');
+  for(let i=0;i<70;i++){
+    const s = document.createElement('div');
+    s.className = 'bg-star';
+    const size = Math.random()*2 + 1;
+    s.style.width = size+'px';
+    s.style.height = size+'px';
+    s.style.left = Math.random()*100 + '%';
+    s.style.top = Math.random()*100 + '%';
+    s.style.animationDuration = (2 + Math.random()*4)+'s';
+    s.style.animationDelay = (Math.random()*4)+'s';
+    sky.appendChild(s);
+  }
+
+  // ---------------- render interactive stars ----------------
+  const openedOrder = [];
+  const lines = document.getElementById('lines');
+  lines.setAttribute('viewBox', '0 0 100 100');
+
+  starData.forEach(star=>{
+    const btn = document.createElement('button');
+    btn.className = 'star-node' + (star.isFinal ? ' final' : '');
+    btn.style.left = star.x + '%';
+    btn.style.top = star.y + '%';
+    btn.setAttribute('aria-label', star.isFinal ? 'A letter, waiting' : ('Memory: ' + star.label));
+    btn.id = 'star-' + star.id;
+
+    const glow = document.createElement('div');
+    glow.className = 'glow';
+    btn.appendChild(glow);
+
+    if(!star.isFinal){
+      const lbl = document.createElement('div');
+      lbl.className = 'star-label';
+      lbl.textContent = star.label;
+      btn.appendChild(lbl);
+    }
+
+    btn.addEventListener('click', ()=> openStar(star, btn));
+    sky.appendChild(btn);
+  });
+
+  function updateProgress(){
+    const memoryStars = starData.filter(s=>!s.isFinal);
+    const openedMemories = memoryStars.filter(s=>openedOrder.includes(s.id));
+    document.getElementById('progress').textContent = openedMemories.length + ' of ' + memoryStars.length + ' stars found';
+
+    if(openedMemories.length === memoryStars.length){
+      const banner = document.getElementById('finaleBanner');
+      banner.classList.add('show');
+    }
+  }
+
+  function drawLine(fromId, toId){
+    const a = document.getElementById('star-'+fromId);
+    const b = document.getElementById('star-'+toId);
+    if(!a || !b) return;
+    const ax = parseFloat(a.style.left), ay = parseFloat(a.style.top);
+    const bx = parseFloat(b.style.left), by = parseFloat(b.style.top);
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d', `M ${ax} ${ay} L ${bx} ${by}`);
+    path.style.opacity = 0;
+    lines.appendChild(path);
+    requestAnimationFrame(()=>{ path.style.transition='opacity 0.8s ease'; path.style.opacity = 0.55; });
+  }
+
+  function openStar(star, btn){
+    if(!star.isFinal){
+      if(!openedOrder.includes(star.id)){
+        if(openedOrder.length > 0){
+          drawLine(openedOrder[openedOrder.length-1], star.id);
+        }
+        openedOrder.push(star.id);
+        btn.classList.add('opened');
+        updateProgress();
+      }
+      showCard(star);
+    } else {
+      const memoryStars = starData.filter(s=>!s.isFinal);
+      const allOpened = memoryStars.every(s=>openedOrder.includes(s.id));
+      if(!allOpened){
+        showLockedFinal();
+        return;
+      }
+      if(openedOrder.length > 0 && !btn.classList.contains('opened')){
+        drawLine(openedOrder[openedOrder.length-1], star.id);
+      }
+      btn.classList.add('opened');
+      document.getElementById('finaleBanner').classList.remove('show');
+      showLetterCard(star);
+    }
+  }
+
+  function showLockedFinal(){
+    const inner = document.getElementById('cardInner');
+    inner.innerHTML = `
+      <div class="card-caption">Not yet 🌙</div>
+      <div class="card-text">This one's waiting for you — go find the rest of the stars first.</div>
+      <button class="card-close" id="closeCardBtn">Close</button>
+    `;
+    document.getElementById('cardOverlay').classList.add('show');
+    document.getElementById('closeCardBtn').addEventListener('click', closeCard);
+  }
+
+  function showCard(star){
+    const inner = document.getElementById('cardInner');
+    const photoHtml = star.photo
+      ? `<div class="card-photo"><img src="${star.photo}" alt="${star.label}"></div>`
+      : `<div class="card-photo">PHOTO PLACEHOLDER<br><small>(swap "photo" field with a real path)</small></div>`;
+    inner.innerHTML = `
+      ${photoHtml}
+      <div class="card-caption">${star.caption}</div>
+      <div class="card-text">${star.text}</div>
+      <button class="card-close" id="closeCardBtn">Close</button>
+    `;
+    document.getElementById('cardOverlay').classList.add('show');
+    document.getElementById('closeCardBtn').addEventListener('click', closeCard);
+  }
+
+  function showLetterCard(star){
+    const inner = document.getElementById('cardInner');
+    const paragraphs = star.letterParagraphs.map(p=>`<p>${p}</p>`).join('');
+    inner.innerHTML = `
+      <div class="letter-body">
+        ${paragraphs}
+        <div class="signoff">${star.signoff}</div>
+      </div>
+      <button class="card-close" id="closeCardBtn">Close</button>
+    `;
+    document.getElementById('cardOverlay').classList.add('show');
+    document.getElementById('closeCardBtn').addEventListener('click', closeCard);
+  }
+
+  function closeCard(){
+    document.getElementById('cardOverlay').classList.remove('show');
+  }
+
+  document.getElementById('cardOverlay').addEventListener('click', (e)=>{
+    if(e.target.id === 'cardOverlay') closeCard();
+  });
+
+  // ---------------- intro / music ----------------
+  const music = document.getElementById('bgMusic');
+  const musicToggle = document.getElementById('musicToggle');
+  let musicPlaying = false;
+
+  function playMusic(){
+    music.volume = 0.45;
+    music.play().then(()=>{
+      musicPlaying = true;
+      musicToggle.textContent = '🔊';
+    }).catch(()=>{ /* autoplay blocked; she can tap the toggle */ });
+  }
+
+  document.getElementById('beginBtn').addEventListener('click', ()=>{
+    playMusic();
+    document.getElementById('intro').classList.add('hidden');
+  });
+
+  musicToggle.addEventListener('click', ()=>{
+    if(musicPlaying){
+      music.pause();
+      musicPlaying = false;
+      musicToggle.textContent = '🔇';
+    } else {
+      playMusic();
+    }
+  });
+
+  document.getElementById('finaleBanner').addEventListener('click', ()=>{
+    document.getElementById('star-s6').click();
+  });
+</script>
+
+</body>
+</html>
